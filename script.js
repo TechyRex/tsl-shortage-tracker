@@ -293,6 +293,7 @@ const skuData = [
     { sku: "Zagg Energy Sleek Can 33cl", price: 10150 }
 ];
 
+
 // State Management
 let products = [];
 let currentRecordId = null;
@@ -417,7 +418,7 @@ function renderProductsTable() {
         skuInput.readOnly = true;
         skuCell.appendChild(skuInput);
         
-        // QTY Loaded
+        // QTY Loaded (MANUAL INPUT - as requested)
         const qtyLoadedCell = document.createElement('td');
         const qtyLoadedInput = document.createElement('input');
         qtyLoadedInput.type = 'number';
@@ -430,7 +431,7 @@ function renderProductsTable() {
         });
         qtyLoadedCell.appendChild(qtyLoadedInput);
         
-        // QTY Delivered
+        // QTY Delivered (MANUAL INPUT - as requested)
         const qtyDeliveredCell = document.createElement('td');
         const qtyDeliveredInput = document.createElement('input');
         qtyDeliveredInput.type = 'number';
@@ -443,7 +444,7 @@ function renderProductsTable() {
         });
         qtyDeliveredCell.appendChild(qtyDeliveredInput);
         
-        // QTY Rejected (auto-calculated)
+        // QTY Rejected (auto-calculated: QTY Loaded - QTY Delivered)
         const qtyRejectedCell = document.createElement('td');
         const qtyRejectedInput = document.createElement('input');
         qtyRejectedInput.type = 'text';
@@ -452,7 +453,7 @@ function renderProductsTable() {
         qtyRejectedInput.readOnly = true;
         qtyRejectedCell.appendChild(qtyRejectedInput);
         
-        // QTY Returned
+        // QTY Returned (MANUAL INPUT)
         const qtyReturnedCell = document.createElement('td');
         const qtyReturnedInput = document.createElement('input');
         qtyReturnedInput.type = 'number';
@@ -465,7 +466,7 @@ function renderProductsTable() {
         });
         qtyReturnedCell.appendChild(qtyReturnedInput);
         
-        // Shortage QTY-PRE (auto-calculated)
+        // Shortage QTY-PRE (auto-calculated: QTY Rejected - QTY Returned)
         const shortageQtyPreCell = document.createElement('td');
         const shortageQtyPreInput = document.createElement('input');
         shortageQtyPreInput.type = 'text';
@@ -474,7 +475,7 @@ function renderProductsTable() {
         shortageQtyPreInput.readOnly = true;
         shortageQtyPreCell.appendChild(shortageQtyPreInput);
         
-        // Shortage Value-PRE (auto-calculated)
+        // Shortage Value-PRE (auto-calculated: Shortage QTY-PRE * SKU Price)
         const shortageValuePreCell = document.createElement('td');
         const shortageValuePreInput = document.createElement('input');
         shortageValuePreInput.type = 'text';
@@ -483,7 +484,7 @@ function renderProductsTable() {
         shortageValuePreInput.readOnly = true;
         shortageValuePreCell.appendChild(shortageValuePreInput);
         
-        // After Analysis
+        // After Analysis (MANUAL INPUT)
         const afterAnalysisCell = document.createElement('td');
         const afterAnalysisInput = document.createElement('input');
         afterAnalysisInput.type = 'number';
@@ -496,7 +497,7 @@ function renderProductsTable() {
         });
         afterAnalysisCell.appendChild(afterAnalysisInput);
         
-        // Actual QTY (auto-calculated)
+        // Actual QTY (auto-calculated: QTY Returned - After Analysis)
         const actualQtyCell = document.createElement('td');
         const actualQtyInput = document.createElement('input');
         actualQtyInput.type = 'text';
@@ -505,7 +506,7 @@ function renderProductsTable() {
         actualQtyInput.readOnly = true;
         actualQtyCell.appendChild(actualQtyInput);
         
-        // Total Shortage (auto-calculated)
+        // Total Shortage (auto-calculated: Shortage QTY-PRE + Actual QTY)
         const totalShortageCell = document.createElement('td');
         const totalShortageInput = document.createElement('input');
         totalShortageInput.type = 'text';
@@ -514,7 +515,7 @@ function renderProductsTable() {
         totalShortageInput.readOnly = true;
         totalShortageCell.appendChild(totalShortageInput);
         
-        // Actual Value (auto-calculated)
+        // Actual Value (auto-calculated: Total Shortage * SKU Price)
         const actualValueCell = document.createElement('td');
         const actualValueInput = document.createElement('input');
         actualValueInput.type = 'text';
@@ -653,8 +654,9 @@ function validateForm() {
     return true;
 }
 
-// Get form data
+// Get form data - CORRECTED to match your spreadsheet columns EXACTLY
 function getFormData() {
+    // Get basic information
     const basicInfo = {
         date_captured: document.getElementById('dateCaptured').value,
         loading_date: document.getElementById('loadingDate').value,
@@ -666,40 +668,48 @@ function getFormData() {
         staff_id: document.getElementById('staffId').value,
         delivery_officer: document.getElementById('deliveryOfficer').value,
         shipment_no: document.getElementById('shipmentNo').value,
-        cash_recovery: document.getElementById('cashRecovery')?.value || '',
-        debit_memo: document.getElementById('debitMemo')?.value || '',
-        white_slip: document.getElementById('whiteSlip')?.value || 'NO'
+        cash_recovery: document.getElementById('cashRecovery').value || '',
+        debit_memo: document.getElementById('debitMemo').value || '',
+        white_slip: document.getElementById('whiteSlip').value || 'NO'
     };
+    
+    // Since we can only submit one row at a time to SheetDB,
+    // we need to combine all product data into the first product's columns
+    // This means only the FIRST product's data will be saved in the main columns
+    
+    if (products.length > 0) {
+        const firstProduct = products[0];
+        
+        // Map first product's data to spreadsheet columns
+        basicInfo.product_loaded = firstProduct.productLoaded || '';
+        basicInfo.sku_price = firstProduct.skuPrice || 0;
+        basicInfo.qty_loaded = firstProduct.qtyLoaded || 0;
+        basicInfo.qty_delivered = firstProduct.qtyDelivered || 0;
+        basicInfo.qty_rejected = firstProduct.qtyRejected || 0;
+        basicInfo.qty_returned = firstProduct.qtyReturned || 0;
+        basicInfo.shortage_qty_pre = firstProduct.shortageQtyPre || 0;
+        basicInfo.shortage_value_pre = firstProduct.shortageValuePre || 0;
+        basicInfo.after_analysis = firstProduct.afterAnalysis || 0;
+        basicInfo.actual_qty = firstProduct.actualQty || 0;
+        basicInfo.total_shortage = firstProduct.totalShortage || 0;
+        basicInfo.actual_value = firstProduct.actualValue || 0;
+    }
     
     // Calculate totals
     const totalShortageValue = products.reduce((sum, p) => sum + p.shortageValuePre, 0);
     const totalActualValue = products.reduce((sum, p) => sum + p.actualValue, 0);
     
-    // Combine product data
-    const productData = products.map(p => ({
-        product_loaded: p.productLoaded,
-        sku_price: p.skuPrice,
-        qty_loaded: p.qtyLoaded,
-        qty_delivered: p.qtyDelivered,
-        qty_rejected: p.qtyRejected,
-        qty_returned: p.qtyReturned,
-        shortage_qty_pre: p.shortageQtyPre,
-        shortage_value_pre: p.shortageValuePre,
-        after_analysis: p.afterAnalysis,
-        actual_qty: p.actualQty,
-        total_shortage: p.totalShortage,
-        actual_value: p.actualValue
-    }));
+    // Add totals
+    basicInfo.total_shortage_value = totalShortageValue;
+    basicInfo.total_actual_value = totalActualValue;
     
-    return {
-        ...basicInfo,
-        products: JSON.stringify(productData),
-        total_shortage_value: totalShortageValue,
-        total_actual_value: totalActualValue,
-        submission_time: new Date().toISOString(),
-        last_edited: new Date().toISOString(),
-        status: 'submitted'
-    };
+    // Add timestamps with correct ISO format
+    const now = new Date();
+    basicInfo.submission_time = now.toISOString();
+    basicInfo.last_edited = now.toISOString();
+    basicInfo.status = 'submitted';
+    
+    return basicInfo;
 }
 
 // Submit form
@@ -711,6 +721,47 @@ async function submitForm() {
     try {
         const formData = getFormData();
         
+        // Log the data being sent for debugging
+        console.log('Submitting data:', formData);
+        
+        const response = await fetch(SHEETDB_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ data: [formData] })
+        });
+        
+        const responseData = await response.json();
+        console.log('Response:', responseData);
+        
+        if (response.ok) {
+            showToast('Record submitted successfully!');
+            clearForm();
+            // Reset to one product row
+            products = [];
+            addProductRow();
+        } else {
+            throw new Error(`Failed to submit: ${JSON.stringify(responseData)}`);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error submitting form. Please try again.', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Save as draft
+async function saveAsDraft() {
+    if (!validateForm()) return;
+    
+    showLoading();
+    
+    try {
+        const formData = getFormData();
+        formData.status = 'draft';
+        
         const response = await fetch(SHEETDB_URL, {
             method: 'POST',
             headers: {
@@ -720,14 +771,108 @@ async function submitForm() {
         });
         
         if (response.ok) {
-            showToast('Record submitted successfully!');
-            clearForm();
-            // Reset to one product row
-            products = [];
-            addProductRow();
+            showToast('Draft saved successfully!');
+            currentRecordId = (await response.json()).id;
         } else {
-            throw new Error('Failed to submit');
+            throw new Error('Failed to save draft');
         }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error saving draft. Please try again.', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Clear form
+function clearForm() {
+    if (confirm('Are you sure you want to clear the form? All unsaved data will be lost.')) {
+        // Clear all form inputs except date fields
+        document.querySelectorAll('input, select').forEach(element => {
+            if (!element.classList.contains('readonly-input') && 
+                element.id !== 'dateCaptured' && 
+                element.id !== 'loadingDate') {
+                if (element.type === 'select-one') {
+                    element.value = element.id === 'whiteSlip' ? 'NO' : '';
+                } else {
+                    element.value = '';
+                }
+            }
+        });
+        
+        // Reset readonly fields
+        document.getElementById('truckNo').value = '';
+        document.getElementById('lcIncharge').value = '';
+        document.getElementById('deliveryOfficer').value = '';
+        
+        // Reset products
+        products = [];
+        addProductRow();
+        currentRecordId = null;
+        
+        showToast('Form cleared successfully');
+    }
+}
+
+// ALTERNATIVE: If you want to save each product as separate row
+// This would require multiple API calls
+async function submitEachProductSeparately() {
+    if (!validateForm()) return;
+    
+    showLoading();
+    
+    try {
+        const basicInfo = {
+            date_captured: document.getElementById('dateCaptured').value,
+            loading_date: document.getElementById('loadingDate').value,
+            loading_point: document.getElementById('loadingPoint').value,
+            contract: document.getElementById('contract').value,
+            t_no: document.getElementById('tNo').value,
+            truck_no: document.getElementById('truckNo').value,
+            lc: document.getElementById('lcIncharge').value,
+            staff_id: document.getElementById('staffId').value,
+            delivery_officer: document.getElementById('deliveryOfficer').value,
+            shipment_no: document.getElementById('shipmentNo').value,
+            cash_recovery: document.getElementById('cashRecovery').value || '',
+            debit_memo: document.getElementById('debitMemo').value || '',
+            white_slip: document.getElementById('whiteSlip').value || 'NO',
+            submission_time: new Date().toISOString(),
+            last_edited: new Date().toISOString(),
+            status: 'submitted'
+        };
+        
+        // Submit each product as separate row
+        for (const product of products) {
+            const formData = {
+                ...basicInfo,
+                product_loaded: product.productLoaded || '',
+                sku_price: product.skuPrice || 0,
+                qty_loaded: product.qtyLoaded || 0,
+                qty_delivered: product.qtyDelivered || 0,
+                qty_rejected: product.qtyRejected || 0,
+                qty_returned: product.qtyReturned || 0,
+                shortage_qty_pre: product.shortageQtyPre || 0,
+                shortage_value_pre: product.shortageValuePre || 0,
+                after_analysis: product.afterAnalysis || 0,
+                actual_qty: product.actualQty || 0,
+                total_shortage: product.totalShortage || 0,
+                actual_value: product.actualValue || 0,
+                total_shortage_value: product.shortageValuePre || 0,
+                total_actual_value: product.actualValue || 0
+            };
+            
+            await fetch(SHEETDB_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: [formData] })
+            });
+        }
+        
+        showToast(`${products.length} product(s) submitted successfully!`);
+        clearForm();
+        products = [];
+        addProductRow();
+        
     } catch (error) {
         console.error('Error:', error);
         showToast('Error submitting form. Please try again.', 'error');
