@@ -1,0 +1,262 @@
+<!-- admin-login.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSL Admin Login</title>
+    <style>
+        :root {
+            --tsl-red: #8B0000;
+            --tsl-dark: #1a1a1a;
+            --tsl-light: #f8f9fa;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --radius: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 3rem;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo {
+            font-size: 3rem;
+            color: var(--tsl-red);
+            margin-bottom: 1rem;
+        }
+
+        .company-name {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--tsl-red);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--tsl-dark);
+            opacity: 0.7;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #ddd;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--tsl-red);
+            box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(to right, var(--tsl-red), #a52a2a);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(139, 0, 0, 0.2);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 1.5rem;
+            color: var(--tsl-red);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            color: #dc3545;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--tsl-red);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="login-container">
+        <div class="logo-container">
+            <i class="fas fa-chart-bar logo"></i>
+            <h1 class="company-name">TSL ADMIN</h1>
+            <p class="subtitle">Shortage Tracking Dashboard</p>
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label class="form-label">Access Code</label>
+                <input type="text" id="accessCode" class="form-input" placeholder="Enter admin access code" required>
+                <div class="error-message" id="errorMessage">Invalid access code</div>
+            </div>
+
+            <button type="submit" class="login-btn">
+                <i class="fas fa-lock"></i> Access Dashboard
+            </button>
+
+            <a href="index.html" class="back-link">
+                <i class="fas fa-arrow-left"></i> Back to Main Form
+            </a>
+        </form>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('loginForm');
+            const accessCodeInput = document.getElementById('accessCode');
+            const errorMessage = document.getElementById('errorMessage');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const accessCode = accessCodeInput.value.trim();
+                
+                if (!accessCode) {
+                    showError('Please enter an access code');
+                    return;
+                }
+
+                showLoading();
+
+                try {
+                    // Check if code exists and is valid
+                    const codesResponse = await fetch('https://sheetdb.io/api/v1/ky6mzl5sav83s?sheet=codes');
+                    const codesData = await codesResponse.json();
+                    
+                    const validCode = codesData.find(code => 
+                        code.code === accessCode && 
+                        new Date(code.expires_at) > new Date()
+                    );
+
+                    if (validCode) {
+                        // Store access in localStorage
+                        localStorage.setItem('tsl_admin_access', JSON.stringify({
+                            code: accessCode,
+                            timestamp: new Date().toISOString()
+                        }));
+                        
+                        // Redirect to dashboard
+                        window.location.href = 'dashboard.html';
+                    } else {
+                        showError('Invalid or expired access code');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showError('Error verifying access code');
+                } finally {
+                    hideLoading();
+                }
+            });
+
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+                accessCodeInput.style.borderColor = '#dc3545';
+            }
+
+            function showLoading() {
+                loadingOverlay.style.display = 'flex';
+            }
+
+            function hideLoading() {
+                loadingOverlay.style.display = 'none';
+            }
+
+            // Clear error on input
+            accessCodeInput.addEventListener('input', function() {
+                errorMessage.style.display = 'none';
+                accessCodeInput.style.borderColor = '#ddd';
+            });
+        });
+    </script>
+</body>
+</html>
